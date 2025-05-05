@@ -12,34 +12,41 @@ $success = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $username = trim($_POST["username"]);
+    $email = trim($_POST["email"]);
     $password = trim($_POST["password"]);
+    $confirm_password = trim($_POST["confirm_password"]);
 
-    if (empty($username) || empty($password)) {
-        $error = "Both fields are required.";
+    // Validate fields
+    if (empty($username) || empty($email) || empty($password) || empty($confirm_password)) {
+        $error = "All fields are required.";
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $error = "Invalid email format.";
+    } elseif ($password !== $confirm_password) {
+        $error = "Passwords do not match.";
     } else {
-        $stmt = $conn->prepare("SELECT id FROM users WHERE username = ?");
-        $stmt->bind_param("s", $username);
+        // Check for existing username or email
+        $stmt = $conn->prepare("SELECT id FROM users WHERE username = ? OR email = ?");
+        $stmt->bind_param("ss", $username, $email);
         $stmt->execute();
         $stmt->store_result();
 
         if ($stmt->num_rows > 0) {
-            $error = "Username already exists.";
+            $error = "Username or email already exists.";
         } else {
             $hashed_password = password_hash($password, PASSWORD_BCRYPT);
-            $stmt = $conn->prepare("INSERT INTO users (username, password, role) VALUES (?, ?, 'user')");
-            $stmt->bind_param("ss", $username, $hashed_password);
+            $stmt = $conn->prepare("INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, 'user')");
+            $stmt->bind_param("sss", $username, $email, $hashed_password);
 
             if ($stmt->execute()) {
                 $success = "Registration successful. <a href='../login.php'>Login here</a>.";
             } else {
-                $error = "Registration failed. Try again.";
+                $error = "Registration failed: " . $stmt->error;
             }
         }
         $stmt->close();
     }
 }
 ?>
-
 
 <!DOCTYPE html>
 <html>
@@ -68,7 +75,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             text-align: center;
             color: #005b96;
         }
-        input[type="text"], input[type="password"], input[type="submit"] {
+        input {
             width: 100%;
             padding: 10px;
             margin: 12px 0;
@@ -112,8 +119,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <?php endif; ?>
 
         <form method="post">
-            <input type="text" name="username" placeholder="Enter Username" required>
-            <input type="password" name="password" placeholder="Enter Password" required>
+            <input type="text" name="username" placeholder="Username" required>
+            <input type="email" name="email" placeholder="Email" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <input type="password" name="confirm_password" placeholder="Confirm Password" required>
             <input type="submit" value="Register">
         </form>
 

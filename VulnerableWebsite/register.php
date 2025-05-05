@@ -11,15 +11,19 @@ $error = "";
 $success = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // No input sanitization or validation
+    // No input validation or sanitization
     $username = $_POST["username"];
+    $email = $_POST["email"];
     $password = $_POST["password"];
+    $confirm_password = $_POST["confirm_password"];
 
-    // Weak hashing (md5)
-    $hashed_password = md5($password);
+    // No email format check, password match check, or uniqueness check
+    $hashed_password = md5($password);  // Weak hashing
 
-    // Vulnerable SQL: directly injecting user input
-    $sql = "INSERT INTO users (username, password, role) VALUES ('$username', '$hashed_password', 'user')";
+    // Vulnerable SQL query with direct string injection
+    $sql = "INSERT INTO users (username, email, password, role) 
+            VALUES ('$username', '$email', '$hashed_password', 'user')";
+
     if ($conn->query($sql) === TRUE) {
         $success = "Registration successful. <a href='../login.php'>Login here</a>.";
     } else {
@@ -27,7 +31,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 }
 ?>
-
 
 <!DOCTYPE html>
 <html>
@@ -56,7 +59,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             text-align: center;
             color: #b30000;
         }
-        input[type="text"], input[type="password"], input[type="submit"] {
+        input {
             width: 100%;
             padding: 10px;
             margin: 12px 0;
@@ -100,8 +103,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <?php endif; ?>
 
         <form method="post">
-            <input type="text" name="username" placeholder="Enter Username">
-            <input type="password" name="password" placeholder="Enter Password">
+            <input type="text" name="username" placeholder="Username">
+            <input type="email" name="email" placeholder="Email">
+            <input type="password" name="password" placeholder="Password">
+            <input type="password" name="confirm_password" placeholder="Confirm Password">
             <input type="submit" value="Register">
         </form>
 
