@@ -2,46 +2,49 @@
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
-?>
-
-<?php
+session_start();
 require_once 'config.php';
 
 $error = "";
-$success = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // No input validation or sanitization
     $username = $_POST["username"];
-    $email = $_POST["email"];
     $password = $_POST["password"];
-    $confirm_password = $_POST["confirm_password"];
 
-    // No email format check, password match check, or uniqueness check
-    $hashed_password = md5($password);  // Weak hashing
+    // Prepared statement to prevent SQL injection
+    $stmt = $conn->prepare("SELECT * FROM users WHERE username = ?");
+    $stmt->bind_param("s", $username); // "s" indicates the type is string
+    $stmt->execute();
+    $result = $stmt->get_result();
 
-    // Vulnerable SQL query with direct string injection
-    $sql = "INSERT INTO users (username, email, password, role) 
-            VALUES ('$username', '$email', '$hashed_password', 'user')";
+    if ($result && $result->num_rows == 1) {
+        $user = $result->fetch_assoc();
 
-    if ($conn->query($sql) === TRUE) {
-        $success = "Registration successful. <a href='login.php'>Login here</a>.";
+        if (password_verify($password, $user["password"])) {
+            $_SESSION["user_id"] = $user["id"];
+            $_SESSION["username"] = $user["username"];
+            header("Location: home.php");
+            exit;
+        } else {
+            $error = "Invalid password.";
+        }
     } else {
-        $error = "Registration failed: " . $conn->error;
+        $error = "User not found.";
     }
+
+    $stmt->close(); // Close the statement
 }
 ?>
 
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Vulnerable Register</title>
+    <title>Login</title>
     <style>
         body {
-            margin: 0;
-            padding: 0;
+            margin: 0; padding: 0;
             font-family: Arial, sans-serif;
-            background: #fff4f4;
+            background: #eef3f7;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -57,9 +60,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
         h2 {
             text-align: center;
-            color: #b30000;
+            color: #333;
         }
-        input {
+        input[type="text"], input[type="password"], input[type="submit"] {
             width: 100%;
             padding: 10px;
             margin: 12px 0;
@@ -68,22 +71,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             font-size: 16px;
         }
         input[type="submit"] {
-            background-color: #b30000;
+            background-color: #005b96;
             color: white;
             cursor: pointer;
             border: none;
         }
         input[type="submit"]:hover {
-            background-color: #800000;
+            background-color: #003f6f;
         }
         .error { color: red; margin-bottom: 10px; }
-        .success { color: green; margin-bottom: 10px; }
         .link {
             margin-top: 15px;
             text-align: center;
         }
         .link a {
-            color: #b30000;
+            color: #005b96;
             text-decoration: none;
         }
         .link a:hover {
@@ -93,25 +95,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 </head>
 <body>
     <div class="container">
-        <h2>Vulnerable Register</h2>
+        <h2>Login</h2>
 
         <?php if ($error): ?>
             <div class="error"><?php echo $error; ?></div>
         <?php endif; ?>
-        <?php if ($success): ?>
-            <div class="success"><?php echo $success; ?></div>
-        <?php endif; ?>
 
         <form method="post">
-            <input type="text" name="username" placeholder="Username">
-            <input type="email" name="email" placeholder="Email">
-            <input type="password" name="password" placeholder="Password">
-            <input type="password" name="confirm_password" placeholder="Confirm Password">
-            <input type="submit" value="Register">
+            <input type="text" name="username" placeholder="Enter Username" required>
+            <input type="password" name="password" placeholder="Enter Password" required>
+            <input type="submit" value="Login">
         </form>
 
         <div class="link">
-            Already have an account? <a href="login.php">Login here</a>
+            Don't have an account? <a href="register.php">Register here</a>
         </div>
     </div>
 </body>

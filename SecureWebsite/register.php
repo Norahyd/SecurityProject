@@ -38,7 +38,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $stmt->bind_param("sss", $username, $email, $hashed_password);
 
             if ($stmt->execute()) {
-                $success = "Registration successful. <a href='../login.php'>Login here</a>.";
+                $success = "Registration successful. <a href='login.php'>Login here</a>.";
             } else {
                 $error = "Registration failed: " . $stmt->error;
             }
@@ -127,7 +127,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </form>
 
         <div class="link">
-            Already have an account? <a href="../login.php">Login here</a>
+            Already have an account? <a href="login.php">Login here</a>
         </div>
     </div>
 </body>
