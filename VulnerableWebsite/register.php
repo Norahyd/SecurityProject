@@ -5,27 +5,24 @@ error_reporting(E_ALL);
 ?>
 
 <?php
-require_once 'db.php';
+require_once 'config.php';
 
 $error = "";
 $success = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // No input validation or sanitization
     $username = $_POST["username"];
     $email = $_POST["email"];
     $password = $_POST["password"];
     $confirm_password = $_POST["confirm_password"];
 
-    // No email format check, password match check, or uniqueness check
-    $hashed_password = md5($password);  // Weak hashing
+    $hashed_password = md5($password);
 
-    // Vulnerable SQL query with direct string injection
     $sql = "INSERT INTO users (username, email, password, role) 
             VALUES ('$username', '$email', '$hashed_password', 'user')";
 
     if ($conn->query($sql) === TRUE) {
-        $success = "Registration successful. <a href='login.php'>Login here</a>.";
+        $success = "Registration successful. <a href='../login.php'>Login here</a>.";
     } else {
         $error = "Registration failed: " . $conn->error;
     }
@@ -41,7 +38,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             margin: 0;
             padding: 0;
             font-family: Arial, sans-serif;
-            background: #fff4f4;
+            background: #f0f9ff;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -57,7 +54,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
         h2 {
             text-align: center;
-            color: #b30000;
+            color: #005b96;
         }
         input {
             width: 100%;
@@ -68,13 +65,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             font-size: 16px;
         }
         input[type="submit"] {
-            background-color: #b30000;
+            background-color: #005b96;
             color: white;
             cursor: pointer;
             border: none;
         }
         input[type="submit"]:hover {
-            background-color: #800000;
+            background-color: #003f6f;
         }
         .error { color: red; margin-bottom: 10px; }
         .success { color: green; margin-bottom: 10px; }
@@ -83,7 +80,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             text-align: center;
         }
         .link a {
-            color: #b30000;
+            color: #005b96;
             text-decoration: none;
         }
         .link a:hover {
@@ -93,7 +90,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 </head>
 <body>
     <div class="container">
-        <h2>Vulnerable Register</h2>
+        <h2>Register</h2>
 
         <?php if ($error): ?>
             <div class="error"><?php echo $error; ?></div>
@@ -104,14 +101,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         <form method="post">
             <input type="text" name="username" placeholder="Username">
-            <input type="email" name="email" placeholder="Email">
+            <input type="text" name="email" placeholder="Email">
             <input type="password" name="password" placeholder="Password">
             <input type="password" name="confirm_password" placeholder="Confirm Password">
             <input type="submit" value="Register">
         </form>
 
         <div class="link">
-            Already have an account? <a href="login.php">Login here</a>
+            Already have an account? <a href="../login.php">Login here</a>
         </div>
     </div>
 </body>
