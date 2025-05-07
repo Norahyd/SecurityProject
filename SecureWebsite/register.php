@@ -5,7 +5,7 @@ error_reporting(E_ALL);
 ?>
 
 <?php
-require_once 'db.php';
+require_once 'config.php';
 
 $error = "";
 $success = "";
@@ -16,13 +16,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $password = trim($_POST["password"]);
     $confirm_password = trim($_POST["confirm_password"]);
 
-    // Validate fields
+    // Validation
     if (empty($username) || empty($email) || empty($password) || empty($confirm_password)) {
         $error = "All fields are required.";
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = "Invalid email format.";
     } elseif ($password !== $confirm_password) {
         $error = "Passwords do not match.";
+    } elseif (strlen($password) < 8) {
+        $error = "Password must be at least 8 characters long.";
+    } elseif (!preg_match('/[^a-zA-Z0-9]/', $password)) {
+        $error = "Password must contain at least one symbol.";
     } else {
         // Check for existing username or email
         $stmt = $conn->prepare("SELECT id FROM users WHERE username = ? OR email = ?");
@@ -38,7 +42,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $stmt->bind_param("sss", $username, $email, $hashed_password);
 
             if ($stmt->execute()) {
-                $success = "Registration successful. <a href='login.php'>Login here</a>.";
+                $success = "Registration successful. <a href='../login.php'>Login here</a>.";
             } else {
                 $error = "Registration failed: " . $stmt->error;
             }
@@ -121,13 +125,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <form method="post">
             <input type="text" name="username" placeholder="Username" required>
             <input type="email" name="email" placeholder="Email" required>
-            <input type="password" name="password" placeholder="Password" required>
+            <input type="password" name="password" placeholder="Password (min 8 chars, 1 symbol)" required>
             <input type="password" name="confirm_password" placeholder="Confirm Password" required>
             <input type="submit" value="Register">
         </form>
 
         <div class="link">
-            Already have an account? <a href="login.php">Login here</a>
+            Already have an account? <a href="../login.php">Login here</a>
         </div>
     </div>
 </body>
