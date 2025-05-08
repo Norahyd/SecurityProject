@@ -2,29 +2,45 @@
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
-?>
 
-<?php
-require_once 'config.php';
+//  Database connection
+require_once 'db.php';
 
 $error = "";
 $success = "";
 
+//  Handle POST request for registration
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $username = $_POST["username"];
-    $email = $_POST["email"];
-    $password = $_POST["password"];
-    $confirm_password = $_POST["confirm_password"];
+    //  Vulnerable: no input sanitization or validation
+    $username = trim($_POST["username"]);
+    $email = trim($_POST["email"]);
+    $password = trim($_POST["password"]);
+    $confirm_password = trim($_POST["confirm_password"]);
 
-    $hashed_password = md5($password);
-
-    $sql = "INSERT INTO users (username, email, password, role) 
-            VALUES ('$username', '$email', '$hashed_password', 'user')";
-
-    if ($conn->query($sql) === TRUE) {
-        $success = "Registration successful. <a href='../login.php'>Login here</a>.";
+    //  Vulnerability: allows empty or malicious input
+    if (empty($username) || empty($email) || empty($password) || empty($confirm_password)) {
+        $error = "All fields are required.";
     } else {
-        $error = "Registration failed: " . $conn->error;
+        //  Insecure: using MD5 for password hashing (fast, no salt, easily cracked)
+        //  In secure version, we used password_hash($password, PASSWORD_BCRYPT)
+        $hashed_password = md5($password);
+
+        //  SQL Injection Vulnerability:
+        // If user inputs SQL code (e.g., DROP TABLE users), it will be executed directly
+        if (preg_match('/^\s*(INSERT|DROP|UPDATE|DELETE|ALTER|CREATE)\s+/i', $username)) {
+            $sql = $username; // Attacker controls full SQL — this is intentional
+        } else {
+            //  Insecure SQL string interpolation — vulnerable to SQL injection
+            $sql = "INSERT INTO users (username, email, password, role)
+                    VALUES ('$username', '$email', '$hashed_password', 'user')";
+        }
+
+        //  Using multi_query() to allow execution of multiple SQL commands
+        if ($conn->multi_query($sql) === TRUE) {
+            $success = "Registration successful.";
+        } else {
+            $error = "Registration failed: " . $conn->error;
+        }
     }
 }
 ?>
@@ -92,6 +108,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <div class="container">
         <h2>Register</h2>
 
+        <!--  Display error or success messages -->
         <?php if ($error): ?>
             <div class="error"><?php echo $error; ?></div>
         <?php endif; ?>
@@ -99,6 +116,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <div class="success"><?php echo $success; ?></div>
         <?php endif; ?>
 
+        <!--  No CSRF protection, no input validation -->
         <form method="post">
             <input type="text" name="username" placeholder="Username">
             <input type="text" name="email" placeholder="Email">
@@ -108,7 +126,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </form>
 
         <div class="link">
-            Already have an account? <a href="../login.php">Login here</a>
+            Already have an account? <a href="login.php">Login here</a>
         </div>
     </div>
 </body>
