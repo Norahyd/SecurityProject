@@ -32,7 +32,22 @@ DROP TABLE users;
 DROP TABLE users;
 - ✅ The system will reject the input due to prepared statements and input validation.
 
-### 🔐 3. Cookie-Based Authentication Test
+
+### 🔓 3. SQL Injection in Vulnerable Login Page
+- Go to notsec/login.php
+- In the username or password field, enter the following:
+' OR '1'='1
+- Click Login
+- ❗ Because the page is not secure, you will be logged in without providing valid credentials. This demonstrates a classic SQL Injection vulnerability due to lack of prepared statements.
+
+### 🔐 4. Prevented SQL Injection in Secure Login Page
+- Go to secure/login.php
+- Enter the same input:
+' OR '1'='1
+- ✅ The system will reject the login attempt because it uses prepared statements and input sanitization to prevent SQL injection.
+
+
+### 🔐 5. Cookie-Based Authentication Test
 
 - Login using the secure login page.
 - Open browser developer tools > Application > Cookies.
@@ -40,7 +55,7 @@ DROP TABLE users;
 - Try deleting this cookie and refreshing `dashboard.php`.
 - ✅ You will be redirected to `login.php`, confirming proper auth control.
 
-### 🔐 4. Role-Based Access Control
+### 🔐 6. Role-Based Access Control
 
 - Login as a regular user:
 - Try to access `addbook.php` or delete books in `books.php`.
