@@ -22,15 +22,57 @@ Use these steps for both the secure and insecure versions:
 
 6. Use the **Online File Manager** to upload the desired project folder (`secure/` or `notsec/`) and the `/uploads` folder
 
-7. Install a free SSL certificate from the **"Free SSL Certificate"** tab in InfinityFree for the secure version
+7. Both versions are now deployed:
+🔓 Insecure Version (No SSL):
+   http://notsecbookreview.infinityfreeapp.com/notsec/login.php?i=1
+   No SSL certificate issued — this helps demonstrate the lack of security.
 
-8. Access your app in a web browser via your subdomain (e.g., `https://yourproject.infinityfreeapp.com/secure/`)
+8. the secure version, go to the "Free SSL Certificate" tab in InfinityFree.
+
+9. Generate a free SSL certificate, verify domain ownership, and install the certificate.
+
+10. After installation, enable HTTPS in your domain settings via cPanel.
+✅  The secure version is now available at:
+    https://bookreview.infinityfreeapp.com/sec/login.php
 
 ### 📝 Notes:
 - Add books manually through the UI or database (or use SQL insert)
+users table
+
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    role ENUM('user', 'admin') NOT NULL DEFAULT 'user',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 - All users are assigned the `user` role by default — promote a user by updating their role in the database:
   ```sql
   UPDATE users SET role = 'admin' WHERE username = 'your_username';
+
+
+books tabele
+
+CREATE TABLE IF NOT EXISTS books (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    author VARCHAR(255) NOT NULL,
+    image VARCHAR(255)
+);
+
+reviews table
+
+CREATE TABLE IF NOT EXISTS reviews (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    book_id INT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
+);
+
 
 
 ## 🔐 Security Features Demonstrated
