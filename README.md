@@ -7,6 +7,32 @@ This project demonstrates the difference between a **secure** and a **vulnerable
 - ✅ **Secure Version:** Implements modern security best practices including input validation, hashed passwords (bcrypt), prepared SQL statements, session token cookies, and role-based access control.
 - ❌ **Vulnerable Version:** Intentionally exposes common web vulnerabilities like SQL injection, weak password storage (MD5), XSS, and insecure authentication methods for learning and testing purposes.
 
+## 🚀 How to Run the Application
+Use these steps for both the secure and insecure versions:
+
+1. Clone this repository
+
+2. Visit [https://www.infinityfree.com/], register and verify your account
+
+3. Create a hosting account and choose a subdomain (e.g., `yourproject.infinityfreeapp.com`)
+
+4. Open the **Control Panel (cPanel)** for your hosting account
+
+5. Go to **MySQL Databases**, create a new database, and import `book_reviews.sql`
+
+6. Use the **Online File Manager** to upload the desired project folder (`secure/` or `notsec/`) and the `/uploads` folder
+
+7. Install a free SSL certificate from the **"Free SSL Certificate"** tab in InfinityFree for the secure version
+
+8. Access your app in a web browser via your subdomain (e.g., `https://yourproject.infinityfreeapp.com/secure/`)
+
+### 📝 Notes:
+- Add books manually through the UI or database (or use SQL insert)
+- All users are assigned the `user` role by default — promote a user by updating their role in the database:
+  ```sql
+  UPDATE users SET role = 'admin' WHERE username = 'your_username';
+
+
 ## 🔐 Security Features Demonstrated
 
 - Secure password hashing using `password_hash()` (bcrypt)
