@@ -2,21 +2,27 @@
 session_start();
 require 'db.php';
 
+// Check if user is logged in
 if (!isset($_SESSION['username'])) {
     header("Location: login.php");
     exit();
 }
 
-// Handle delete if admin
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_book_id']) && $_SESSION['role'] === 'admin') {
+// VULNERABILITY: No role-based restriction on deletion
+// Anyone logged in can submit a POST request to delete books
+// There's no check if role is admin
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_book_id'])) {
     $book_id = intval($_POST['delete_book_id']);
     $stmt = $conn->prepare("DELETE FROM books WHERE id = ?");
     $stmt->bind_param("i", $book_id);
     $stmt->execute();
+
+    // Redirects without verifying user's authority
     header("Location: book_vulnerable.php");
     exit();
 }
 
+// Retrieve all books for display
 $result = $conn->query("SELECT * FROM books");
 ?>
 <!DOCTYPE html>
@@ -42,7 +48,12 @@ $result = $conn->query("SELECT * FROM books");
         .book-info { flex-grow: 1; }
         .book-img { margin-right: 20px; }
         .book-img img { width: 80px; height: auto; border-radius: 5px; }
-        button { background: #4b3ea7; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; margin-left: 10px; }
+        button {
+            background: #4b3ea7; color: white;
+            border: none; padding: 8px 12px;
+            border-radius: 5px; cursor: pointer;
+            margin-left: 10px;
+        }
         button:hover { background: #e8491d; }
     </style>
 </head>
@@ -50,12 +61,17 @@ $result = $conn->query("SELECT * FROM books");
 <nav>
     <a href="dashboard_vulnerable.php">Dashboard</a>
     <a href="book_vulnerable.php">View Books</a>
-    <?php if (true): // ❌ vulnerable: everyone sees the Add Book option ?>
+
+    <!-- VULNERABILITY: Unrestricted visibility -->
+    <!-- Any user sees the Add Book button, even non-admins -->
+    <!-- This promotes broken access control by UI -->
+    <?php if (true): ?>
         <a href="addbook_vulnerable.php">Add Book</a>
     <?php endif; ?>
 
     <a href="login.php">Logout</a>
 </nav>
+
 <div class="container">
     <h2>Your Book List</h2>
     <?php while ($book = $result->fetch_assoc()): ?>
@@ -71,7 +87,10 @@ $result = $conn->query("SELECT * FROM books");
             </div>
             <div>
                 <a href="reviews_vulnerable.php?book_id=<?php echo $book['id']; ?>"><button>View Reviews</button></a>
-                <?php if (true): // ❌ vulnerable: everyone can see and use delete ?>
+
+                <!-- VULNERABILITY: Deletion is allowed for all users -->
+                <!-- No role check. This form should only appear to admins -->
+                <?php if (true): ?>
                     <form method="post" action="" style="display:inline;">
                         <input type="hidden" name="delete_book_id" value="<?php echo $book['id']; ?>">
                         <button onclick="return confirm('Delete this book?')">Delete</button>

@@ -2,16 +2,42 @@
 session_start();
 require 'db.php';
 
-if (!isset($_SESSION['username'])) {
+// SECURITY CHECK: Ensure the session_token cookie exists
+// We use cookies for persistent login. Without a token, redirect to login.
+if (!isset($_COOKIE['session_token'])) {
     header("Location: login.php");
     exit();
 }
+
+// Validate the session token by looking it up in the database
+// This prevents forged cookies from granting access
+$token = $_COOKIE['session_token'];
+$stmt = $conn->prepare("SELECT * FROM users WHERE session_token = ?");
+$stmt->bind_param("s", $token);
+$stmt->execute();
+$result = $stmt->get_result();
+
+// If token is invalid or not found, redirect to login
+if ($result->num_rows !== 1) {
+    header("Location: login.php");
+    exit();
+}
+
+// Token is valid, fetch user info
+$user = $result->fetch_assoc();
+
+// Restore session variables if they were lost (e.g., after browser restart)
+// This enables consistent session usage across pages
+$_SESSION['user_id'] = $user['id'];
+$_SESSION['username'] = $user['username'];
+$_SESSION['role'] = $user['role'];
 
 $book_id = isset($_GET['book_id']) ? (int)$_GET['book_id'] : 0;
 $user_id = $_SESSION['user_id'];
 $role = $_SESSION['role'];
 
-// Handle review deletion
+// DELETE REVIEW: Allow if user is admin or review owner
+// Prevents unauthorized deletion; validates ownership or role
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_review_id'])) {
     $review_id = $_POST['delete_review_id'];
     $review_user_id = $_POST['review_user_id'];
@@ -25,9 +51,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_review_id'])) 
     exit();
 }
 
-// Handle new review
+// ADD REVIEW: allow users to review once per book
+// Prevents review spamming and ensures accountability
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['content'])) {
     $content = trim($_POST['content']);
+
+    // Check if the user has already reviewed this book
     $check = $conn->prepare("SELECT id FROM reviews WHERE user_id = ? AND book_id = ?");
     $check->bind_param("ii", $user_id, $book_id);
     $check->execute();
@@ -42,13 +71,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['content'])) {
     exit();
 }
 
-// Book info
+// Fetch book information securely
 $book_stmt = $conn->prepare("SELECT * FROM books WHERE id = ?");
 $book_stmt->bind_param("i", $book_id);
 $book_stmt->execute();
 $book = $book_stmt->get_result()->fetch_assoc();
 
-// Reviews
+// Fetch all reviews for the selected book
 $review_stmt = $conn->prepare("SELECT reviews.*, users.username FROM reviews JOIN users ON reviews.user_id = users.id WHERE book_id = ?");
 $review_stmt->bind_param("i", $book_id);
 $review_stmt->execute();
@@ -76,13 +105,17 @@ $reviews = $review_stmt->get_result();
     <a href="dashboard.php">Dashboard</a>
     <a href="books.php">Back to Books</a>
 </nav>
+
 <div class="container">
     <h2>Reviews for "<?php echo htmlspecialchars($book['title']); ?>"</h2>
 
     <?php while ($review = $reviews->fetch_assoc()): ?>
         <div class="review">
-            <strong><?php echo htmlspecialchars($review['username']); // ✅ Safe: htmlspecialchars prevents XSS ?></strong>
-            <p><?php echo nl2br(htmlspecialchars($review['content'])); // ✅ Safe: htmlspecialchars prevents XSS ?></p>
+            <!-- Prevent XSS with htmlspecialchars -->
+            <strong><?php echo htmlspecialchars($review['username']); ?></strong>
+            <p><?php echo nl2br(htmlspecialchars($review['content'])); ?></p>
+
+            <!-- Only admins or review owners can delete -->
             <?php if ($role === 'admin' || $user_id == $review['user_id']): ?>
                 <form method="post" style="display:inline;">
                     <input type="hidden" name="delete_review_id" value="<?php echo $review['id']; ?>">
@@ -94,6 +127,7 @@ $reviews = $review_stmt->get_result();
     <?php endwhile; ?>
 
     <?php
+    // Allow submitting review only if not already submitted
     $check = $conn->prepare("SELECT id FROM reviews WHERE user_id = ? AND book_id = ?");
     $check->bind_param("ii", $user_id, $book_id);
     $check->execute();

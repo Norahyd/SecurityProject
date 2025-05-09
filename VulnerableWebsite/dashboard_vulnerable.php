@@ -2,17 +2,19 @@
 session_start();
 include("db.php");
 
+// Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
 
-// Fetch statistics
+// VULNERABILITY: No persistent login (token validation)
+
+// Fetch basic statistics from the database
 $book_count = mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM books"))[0];
 $review_count = mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM reviews"))[0];
 $user_count = mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM users"))[0];
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -76,11 +78,13 @@ $user_count = mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM users")
 </head>
 <body>
     <header>Welcome <?php echo htmlspecialchars($_SESSION['username']); ?> to your digital library</header>
+
     <nav>
         <a href="dashboard_vulnerable.php">Dashboard</a>
         <a href="book_vulnerable.php">Books</a>
         <a href="login.php">Logout</a>
     </nav>
+
     <div class="container">
         <h2>Dashboard</h2>
         <p>Overview of your library system.</p>

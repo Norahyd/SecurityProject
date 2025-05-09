@@ -11,21 +11,25 @@ $book_id = isset($_GET['book_id']) ? (int)$_GET['book_id'] : 0;
 $user_id = $_SESSION['user_id'];
 $role = $_SESSION['role'];
 
+// VULNERABILITY: Broken Access Control
+// Anyone can delete any review, regardless of whether they are admin or the original author
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_review_id'])) {
     $review_id = $_POST['delete_review_id'];
     $review_user_id = $_POST['review_user_id'];
 
-    if (true) { // ❌ vulnerable: anyone can delete reviews
+    if (true) {
         $stmt = $conn->prepare("DELETE FROM reviews WHERE id = ?");
         $stmt->bind_param("i", $review_id);
         $stmt->execute();
     }
+
     header("Location: reviews_vulnerable.php?book_id=$book_id");
     exit();
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['content'])) {
     $content = trim($_POST['content']);
+
     $check = $conn->prepare("SELECT id FROM reviews WHERE user_id = ? AND book_id = ?");
     $check->bind_param("ii", $user_id, $book_id);
     $check->execute();
@@ -36,10 +40,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['content'])) {
         $stmt->bind_param("iis", $user_id, $book_id, $content);
         $stmt->execute();
     }
+
     header("Location: reviews_vulnerable.php?book_id=$book_id");
     exit();
 }
 
+// Fetch book and reviews
 $book_stmt = $conn->prepare("SELECT * FROM books WHERE id = ?");
 $book_stmt->bind_param("i", $book_id);
 $book_stmt->execute();
@@ -72,14 +78,22 @@ $reviews = $review_stmt->get_result();
     <a href="dashboard_vulnerable.php">Dashboard</a>
     <a href="book_vulnerable.php">Back to Books</a>
 </nav>
+
 <div class="container">
     <h2>Reviews for "<?php echo $book['title']; ?>"</h2>
 
     <?php while ($review = $reviews->fetch_assoc()): ?>
         <div class="review">
-        <strong><?php echo $review['username']; // ❌ Vulnerable: XSS risk ?></strong>
-        <p><?php echo nl2br($review['content']); // ❌ Vulnerable: XSS risk ?></p>
-            <?php if (true): // ❌ vulnerable: any user can see delete button ?>
+
+            <!-- VULNERABILITY: Reflected XSS -->
+            <!-- Username and review content are printed directly without escaping -->
+            <!-- An attacker could inject <script> tags in their review -->
+            <strong><?php echo $review['username']; ?></strong>
+            <p><?php echo nl2br($review['content']); ?></p>
+
+            <!-- VULNERABILITY: Delete button is visible to everyone -->
+            <!-- No check for admin or review owner before showing the delete form -->
+            <?php if (true): ?>
                 <form method="post" style="display:inline;">
                     <input type="hidden" name="delete_review_id" value="<?php echo $review['id']; ?>">
                     <input type="hidden" name="review_user_id" value="<?php echo $review['user_id']; ?>">
