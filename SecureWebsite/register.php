@@ -1,30 +1,36 @@
 <?php
+//  Enable error reporting during development
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
-?>
 
-<?php
+//  Database connection
 require_once 'db.php';
 
 $error = "";
 $success = "";
 
+//  Handle form submission
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    //  Sanitize user input
     $username = trim($_POST["username"]);
     $email = trim($_POST["email"]);
     $password = trim($_POST["password"]);
     $confirm_password = trim($_POST["confirm_password"]);
 
-    // Validate fields
+    //  Validation logic
     if (empty($username) || empty($email) || empty($password) || empty($confirm_password)) {
         $error = "All fields are required.";
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = "Invalid email format.";
     } elseif ($password !== $confirm_password) {
         $error = "Passwords do not match.";
+    } elseif (strlen($password) < 8) {
+        $error = "Password must be at least 8 characters long.";
+    } elseif (!preg_match('/[^a-zA-Z0-9]/', $password)) {
+        $error = "Password must contain at least one symbol.";
     } else {
-        // Check for existing username or email
+        //  Check for existing username/email
         $stmt = $conn->prepare("SELECT id FROM users WHERE username = ? OR email = ?");
         $stmt->bind_param("ss", $username, $email);
         $stmt->execute();
@@ -33,7 +39,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if ($stmt->num_rows > 0) {
             $error = "Username or email already exists.";
         } else {
+            //  Use bcrypt for secure password hashing
+            // Bcrypt includes salting and is resistant to brute-force attacks
             $hashed_password = password_hash($password, PASSWORD_BCRYPT);
+
+            //  Use prepared statements to prevent SQL injection
             $stmt = $conn->prepare("INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, 'user')");
             $stmt->bind_param("sss", $username, $email, $hashed_password);
 
@@ -51,6 +61,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
     <title>Secure Register</title>
     <style>
         body {
@@ -92,8 +103,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         input[type="submit"]:hover {
             background-color: #003f6f;
         }
-        .error { color: red; margin-bottom: 10px; }
-        .success { color: green; margin-bottom: 10px; }
+        .error {
+            color: red;
+            margin-bottom: 10px;
+        }
+        .success {
+            color: green;
+            margin-bottom: 10px;
+        }
         .link {
             margin-top: 15px;
             text-align: center;
@@ -111,6 +128,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <div class="container">
         <h2>Register</h2>
 
+        <!--  Display error or success messages -->
         <?php if ($error): ?>
             <div class="error"><?php echo $error; ?></div>
         <?php endif; ?>
@@ -118,10 +136,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <div class="success"><?php echo $success; ?></div>
         <?php endif; ?>
 
+        <!--  Registration form -->
         <form method="post">
             <input type="text" name="username" placeholder="Username" required>
             <input type="email" name="email" placeholder="Email" required>
-            <input type="password" name="password" placeholder="Password" required>
+            <input type="password" name="password" placeholder="Password (min 8 chars, 1 symbol)" required>
             <input type="password" name="confirm_password" placeholder="Confirm Password" required>
             <input type="submit" value="Register">
         </form>
@@ -132,3 +151,5 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     </div>
 </body>
 </html>
+
+

@@ -1,13 +1,18 @@
 <?php
+// Enable error reporting for debugging
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
+
+// Start a session to manage user login state
 session_start();
 require_once 'db.php';
 
 $error = "";
 
+// Check if the form is submitted
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Get user inputs from the form
     $username = $_POST["username"];
     $password = $_POST["password"];
 
@@ -17,23 +22,48 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $stmt->execute();
     $result = $stmt->get_result();
 
+    // If a user is found
     if ($result && $result->num_rows == 1) {
         $user = $result->fetch_assoc();
 
+        // Use password_verify to securely check the hashed password
         if (password_verify($password, $user["password"])) {
+            // Create a session to store user data
             $_SESSION["user_id"] = $user["id"];
             $_SESSION["username"] = $user["username"];
             $_SESSION["role"] = $user["role"];
+
+            //  Generate a secure session token
+            $token = bin2hex(random_bytes(32)); // Secure token generation using random bytes
+
+            //  Option 1: Save token in the users table (simpler method)
+            $update = $conn->prepare("UPDATE users SET session_token = ? WHERE id = ?");
+            $update->bind_param("si", $token, $user["id"]);
+            $update->execute();
+            $update->close();
+
+            //  Set the session token as a secure cookie (HTTP-Only and Secure)
+            setcookie("session_token", $token, [
+                "expires" => time() + 3600, // Token expiry set to 1 hour
+                "path" => "/", // Available throughout the site
+                "secure" => true, // Use HTTPS
+                "httponly" => true, // Make the cookie inaccessible to JavaScript
+                "samesite" => "Strict" // Prevent cross-site request forgery (CSRF)
+            ]);
+
+            // Redirect to the dashboard page after successful login
             header("Location: dashboard.php");
             exit;
         } else {
+            // Invalid password
             $error = "Invalid password.";
         }
     } else {
+        // User not found
         $error = "User not found.";
     }
 
-    $stmt->close(); // Close the statement
+    $stmt->close(); // Close the prepared statement to free resources
 }
 ?>
 
@@ -99,7 +129,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <h2>Login</h2>
 
         <?php if ($error): ?>
-            <div class="error"><?php echo $error; ?></div>
+            <div class="error"><?php echo $error; ?></div> <!-- Display error message if credentials are invalid -->
         <?php endif; ?>
 
         <form method="post">

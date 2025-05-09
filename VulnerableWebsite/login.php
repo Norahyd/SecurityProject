@@ -1,33 +1,36 @@
 <?php
+// Enable error reporting for debugging
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
+
+// Start a session to maintain user login state
 session_start();
 require_once 'db.php';
 
 $error = "";
 
+// Check if the form is submitted
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Get user inputs from the form
     $username = $_POST["username"];
-    $password = $_POST["password"];
+    $password = md5($_POST['password']); // 🚨 Insecure: MD5 is weak for password storage, vulnerable to hash collisions
 
-    // 🚨 Vulnerable to SQL Injection
-    $sql = "SELECT * FROM users WHERE username = '$username'";
+    // 🚨 This query is vulnerable to SQL Injection. 
+    $sql = "SELECT * FROM users WHERE username = '$username' AND password = '$password'";
     $result = $conn->query($sql);
 
+    // Check if user exists and credentials match
     if ($result && $result->num_rows == 1) {
         $user = $result->fetch_assoc();
-
-        if (password_verify($password, $user["password"])) {
-            $_SESSION["user_id"] = $user["id"];
-            $_SESSION["username"] = $user["username"];
-            header("Location: dashboard_vulnerable.php");
-            exit;
-        } else {
-            $error = "Invalid password.";
-        }
+        $_SESSION["user_id"] = $user["id"];
+        $_SESSION["username"] = $user["username"];
+        $_SESSION["role"] = $user["role"];
+        header("Location: dashboard_vulnerable.php"); // Redirect to the dashboard
+        exit;
     } else {
-        $error = "User not found.";
+        // Invalid login credentials
+        $error = "Invalid credentials.";
     }
 }
 ?>
@@ -94,7 +97,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <h2>Login</h2>
 
         <?php if ($error): ?>
-            <div class="error"><?php echo $error; ?></div>
+            <div class="error"><?php echo $error; ?></div> <!-- Display error message if credentials are invalid -->
         <?php endif; ?>
 
         <form method="post">

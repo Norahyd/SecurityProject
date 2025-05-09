@@ -2,32 +2,45 @@
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
-?>
 
-<?php
+//  Database connection
 require_once 'db.php';
 
 $error = "";
 $success = "";
 
+//  Handle POST request for registration
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // No input validation or sanitization
-    $username = $_POST["username"];
-    $email = $_POST["email"];
-    $password = $_POST["password"];
-    $confirm_password = $_POST["confirm_password"];
+    //  Vulnerable: no input sanitization or validation
+    $username = trim($_POST["username"]);
+    $email = trim($_POST["email"]);
+    $password = trim($_POST["password"]);
+    $confirm_password = trim($_POST["confirm_password"]);
 
-    // No email format check, password match check, or uniqueness check
-    $hashed_password = md5($password);  // Weak hashing
-
-    // Vulnerable SQL query with direct string injection
-    $sql = "INSERT INTO users (username, email, password, role) 
-            VALUES ('$username', '$email', '$hashed_password', 'user')";
-
-    if ($conn->query($sql) === TRUE) {
-        $success = "Registration successful. <a href='login.php'>Login here</a>.";
+    //  Vulnerability: allows empty or malicious input
+    if (empty($username) || empty($email) || empty($password) || empty($confirm_password)) {
+        $error = "All fields are required.";
     } else {
-        $error = "Registration failed: " . $conn->error;
+        //  Insecure: using MD5 for password hashing (fast, no salt, easily cracked)
+        //  In secure version, we used password_hash($password, PASSWORD_BCRYPT)
+        $hashed_password = md5($password);
+
+        //  SQL Injection Vulnerability:
+        // If user inputs SQL code (e.g., DROP TABLE users), it will be executed directly
+        if (preg_match('/^\s*(INSERT|DROP|UPDATE|DELETE|ALTER|CREATE)\s+/i', $username)) {
+            $sql = $username; // Attacker controls full SQL — this is intentional
+        } else {
+            //  Insecure SQL string interpolation — vulnerable to SQL injection
+            $sql = "INSERT INTO users (username, email, password, role)
+                    VALUES ('$username', '$email', '$hashed_password', 'user')";
+        }
+
+        //  Using multi_query() to allow execution of multiple SQL commands
+        if ($conn->multi_query($sql) === TRUE) {
+            $success = "Registration successful.";
+        } else {
+            $error = "Registration failed: " . $conn->error;
+        }
     }
 }
 ?>
@@ -41,7 +54,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             margin: 0;
             padding: 0;
             font-family: Arial, sans-serif;
-            background: #fff4f4;
+            background: #f0f9ff;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -57,7 +70,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
         h2 {
             text-align: center;
-            color: #b30000;
+            color: #005b96;
         }
         input {
             width: 100%;
@@ -68,13 +81,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             font-size: 16px;
         }
         input[type="submit"] {
-            background-color: #b30000;
+            background-color: #005b96;
             color: white;
             cursor: pointer;
             border: none;
         }
         input[type="submit"]:hover {
-            background-color: #800000;
+            background-color: #003f6f;
         }
         .error { color: red; margin-bottom: 10px; }
         .success { color: green; margin-bottom: 10px; }
@@ -83,7 +96,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             text-align: center;
         }
         .link a {
-            color: #b30000;
+            color: #005b96;
             text-decoration: none;
         }
         .link a:hover {
@@ -93,8 +106,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 </head>
 <body>
     <div class="container">
-        <h2>Vulnerable Register</h2>
+        <h2>Register</h2>
 
+        <!--  Display error or success messages -->
         <?php if ($error): ?>
             <div class="error"><?php echo $error; ?></div>
         <?php endif; ?>
@@ -102,9 +116,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <div class="success"><?php echo $success; ?></div>
         <?php endif; ?>
 
+        <!--  No CSRF protection, no input validation -->
         <form method="post">
             <input type="text" name="username" placeholder="Username">
-            <input type="email" name="email" placeholder="Email">
+            <input type="text" name="email" placeholder="Email">
             <input type="password" name="password" placeholder="Password">
             <input type="password" name="confirm_password" placeholder="Confirm Password">
             <input type="submit" value="Register">
