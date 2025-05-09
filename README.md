@@ -5,7 +5,7 @@
 This project demonstrates the difference between a **secure** and a **vulnerable** user registration and login system using PHP and MySQL. It includes two versions of the application:
 
 - ✅ **Secure Version:** Implements modern security best practices including input validation, hashed passwords (bcrypt), prepared SQL statements, session token cookies, and role-based access control.
-- ❌ **Vulnerable Version:** Intentionally exposes common web vulnerabilities like SQL injection, weak password storage (MD5), and insecure authentication methods for learning and testing purposes.
+- ❌ **Vulnerable Version:** Intentionally exposes common web vulnerabilities like SQL injection, weak password storage (MD5), XSS, and insecure authentication methods for learning and testing purposes.
 
 ## 🔐 Security Features Demonstrated
 
@@ -13,6 +13,7 @@ This project demonstrates the difference between a **secure** and a **vulnerable
 - Session token stored as secure HTTP-only cookie
 - Role-based access (admin vs. user)
 - SQL injection vulnerabilities in the unsafe version
+- Cross-Site Scripting (XSS) in the vulnerable version
 - Cookie-based authentication in the secure version
 
 ## 🧪 How to Test Security Features
@@ -62,6 +63,19 @@ DROP TABLE users;
 - ✅ You will be redirected or blocked.
 - Login as an admin:
 - ✅ You will have full access to add/delete books and moderate reviews.
+
+### 🔓 7. XSS in Vulnerable Reviews Page
+- Go to `notsec/reviews.php`
+- In the review content box, submit:
+```html
+<script>alert('XSS')</script>
+-❗ The script will execute in the browser, showing an alert — demonstrating a stored XSS vulnerability due to missing output sanitization.
+
+### 🔐 8. Prevented XSS in Secure Reviews Page
+- Go to secure/reviews.php
+- Submit the same payload:
+- <script>alert('XSS')</script>
+- ✅ The script will be safely displayed as text, not executed, because of the use of htmlspecialchars().
 
 ## ✅ Pages Included
 
