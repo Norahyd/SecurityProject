@@ -35,7 +35,7 @@ Use these steps for both the secure and insecure versions:
   The secure version is now available at:
     https://bookreview.infinityfreeapp.com/sec/login.php
 
-### 📝 Notes:
+###  Notes:
 - Add books manually through the UI or database (or use SQL insert)
 users table
 
