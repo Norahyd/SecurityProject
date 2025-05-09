@@ -8,7 +8,6 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// VULNERABILITY: No persistent login (token validation)
 
 // Fetch basic statistics from the database
 $book_count = mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM books"))[0];
